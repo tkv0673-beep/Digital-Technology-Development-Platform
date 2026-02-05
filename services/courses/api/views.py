@@ -45,15 +45,23 @@ class CourseViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(mentor_id=mentor_id)
         
         # For non-mentors, only show published courses
-        if not hasattr(self.request, 'user_role') or self.request.user_role != 'mentor':
+        if self.request.user.is_authenticated:
+            user_role = getattr(self.request.user, 'role', None)
+            if user_role != 'mentor':
+                queryset = queryset.filter(is_published=True)
+        else:
             queryset = queryset.filter(is_published=True)
         
         return queryset.prefetch_related('lessons')
     
     def perform_create(self, serializer):
         """Create course - only mentors can create"""
-        if hasattr(self.request, 'user_role') and self.request.user_role == 'mentor':
-            serializer.save(mentor_id=self.request.user_id)
+        if not self.request.user.is_authenticated:
+            raise PermissionError('Authentication required')
+        user_role = getattr(self.request.user, 'role', None)
+        if user_role == 'mentor':
+            user_id = getattr(self.request.user, 'user_id', self.request.user.id)
+            serializer.save(mentor_id=user_id)
         else:
             raise PermissionError('Only mentors can create courses')
     
@@ -111,9 +119,15 @@ class LessonViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def complete(self, request, pk=None):
         """Mark lesson as completed"""
+        if not request.user.is_authenticated:
+            return Response(
+                {'error': 'Authentication required'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
         lesson = self.get_object()
         score = request.data.get('score')
-        progress = CourseService.complete_lesson(request.user_id, lesson.id, score)
+        user_id = getattr(request.user, 'user_id', request.user.id)
+        progress = CourseService.complete_lesson(user_id, lesson.id, score)
         return Response({'message': 'Lesson completed', 'progress': progress.progress_percentage})
 
 
@@ -125,7 +139,10 @@ class EnrollmentViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return Enrollment.objects.filter(user_id=self.request.user_id).select_related('course')
+        if not self.request.user.is_authenticated:
+            return Enrollment.objects.none()
+        user_id = getattr(self.request.user, 'user_id', self.request.user.id)
+        return Enrollment.objects.filter(user_id=user_id).select_related('course')
 
 
 class AchievementViewSet(viewsets.ReadOnlyModelViewSet):
@@ -139,7 +156,13 @@ class AchievementViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['get'])
     def my_achievements(self, request):
         """Get user achievements"""
-        achievements = UserAchievement.objects.filter(user_id=request.user_id)
+        if not request.user.is_authenticated:
+            return Response(
+                {'error': 'Authentication required'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        user_id = getattr(request.user, 'user_id', request.user.id)
+        achievements = UserAchievement.objects.filter(user_id=user_id)
         serializer = UserAchievementSerializer(achievements, many=True)
         return Response(serializer.data)
 
