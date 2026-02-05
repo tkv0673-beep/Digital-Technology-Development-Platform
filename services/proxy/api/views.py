@@ -224,8 +224,15 @@ class ChatBotMessageProxyView(BaseChatBotProxyView):
         headers['Content-Type'] = 'application/json'
         url = f"{settings.CHATBOT_SERVICE_URL}/api/chatbot/message/"
         try:
-            # Forward request body directly to avoid encoding issues
-            body = request.body if hasattr(request, 'body') else b'{}'
+            # Get data from request.data (already parsed by DRF) and re-encode
+            if hasattr(request, 'data') and request.data:
+                import json
+                # Re-encode to ensure UTF-8
+                json_str = json.dumps(request.data, ensure_ascii=False)
+                body = json_str.encode('utf-8')
+            else:
+                # Fallback to raw body
+                body = request.body if hasattr(request, 'body') and request.body else b'{}'
             
             response = requests.post(
                 url, 
