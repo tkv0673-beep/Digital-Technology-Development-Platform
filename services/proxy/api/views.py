@@ -103,6 +103,14 @@ class LogoutProxyView(BaseAuthProxyView):
         return self._proxy('logout/', data=request.data)
 
 
+class MeProxyView(BaseAuthProxyView):
+    """Proxy for current user profile"""
+    permission_classes = [IsAuthenticated]  # Require authentication
+    
+    def get(self, request):
+        return self._proxy('me/', method='GET')
+
+
 class BaseCoursesProxyView(APIView):
     """Base proxy view for courses requests"""
     permission_classes = [IsAuthenticatedOrReadOnly]
