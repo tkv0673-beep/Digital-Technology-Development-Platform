@@ -2,12 +2,12 @@
 Authentication URLs - proxy to tokens service
 """
 from django.urls import path
-from .views import AuthProxyView
+from .views import RegisterProxyView, LoginProxyView, RefreshProxyView, LogoutProxyView
 
 urlpatterns = [
-    path('register/', AuthProxyView.as_view(http_method_names=['post']), name='register'),
-    path('login/', AuthProxyView.as_view(http_method_names=['post']), name='login'),
-    path('refresh/', AuthProxyView.as_view(http_method_names=['post']), name='refresh'),
-    path('logout/', AuthProxyView.as_view(http_method_names=['post']), name='logout'),
+    path('register/', RegisterProxyView.as_view(), name='register'),
+    path('login/', LoginProxyView.as_view(), name='login'),
+    path('refresh/', RefreshProxyView.as_view(), name='refresh'),
+    path('logout/', LogoutProxyView.as_view(), name='logout'),
 ]
 

@@ -52,8 +52,8 @@ class ProxyViewSet(viewsets.ViewSet):
             )
 
 
-class AuthProxyView(APIView):
-    """Proxy for authentication requests to tokens service"""
+class BaseAuthProxyView(APIView):
+    """Base proxy view for authentication requests"""
     permission_classes = [AllowAny]
     
     def _proxy(self, path, method='POST', data=None):
@@ -77,19 +77,30 @@ class AuthProxyView(APIView):
                 {'error': f'Authentication service unavailable: {str(e)}'},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
-    
+
+
+class RegisterProxyView(BaseAuthProxyView):
+    """Proxy for registration"""
     def post(self, request):
-        """Handle POST requests - route based on URL"""
-        path = request.path.rstrip('/').split('/')[-1]
-        if path == 'register':
-            return self._proxy('register/', data=request.data)
-        elif path == 'login':
-            return self._proxy('login/', data=request.data)
-        elif path == 'refresh':
-            return self._proxy('refresh/', data=request.data)
-        elif path == 'logout':
-            return self._proxy('logout/', data=request.data)
-        return Response({'error': 'Invalid endpoint'}, status=status.HTTP_404_NOT_FOUND)
+        return self._proxy('register/', data=request.data)
+
+
+class LoginProxyView(BaseAuthProxyView):
+    """Proxy for login"""
+    def post(self, request):
+        return self._proxy('login/', data=request.data)
+
+
+class RefreshProxyView(BaseAuthProxyView):
+    """Proxy for token refresh"""
+    def post(self, request):
+        return self._proxy('refresh/', data=request.data)
+
+
+class LogoutProxyView(BaseAuthProxyView):
+    """Proxy for logout"""
+    def post(self, request):
+        return self._proxy('logout/', data=request.data)
 
 
 class CoursesProxyView(APIView):
