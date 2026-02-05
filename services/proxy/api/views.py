@@ -170,6 +170,46 @@ class CoursesProgressProxyView(BaseCoursesProxyView):
         return self._proxy(f'{pk}/progress/')
 
 
+class BaseLessonsProxyView(APIView):
+    """Base proxy view for lessons requests"""
+    permission_classes = [IsAuthenticated]
+    
+    def _proxy(self, path, method='GET', data=None):
+        headers = {'Authorization': self.request.META.get('HTTP_AUTHORIZATION', '')}
+        url = f"{settings.COURSES_SERVICE_URL}/api/lessons/{path}"
+        try:
+            if method == 'GET':
+                response = requests.get(url, headers=headers, timeout=10)
+            elif method == 'POST':
+                response = requests.post(url, json=data or {}, headers=headers, timeout=10)
+            elif method == 'PUT':
+                response = requests.put(url, json=data or {}, headers=headers, timeout=10)
+            elif method == 'DELETE':
+                response = requests.delete(url, headers=headers, timeout=10)
+            
+            return Response(
+                response.json() if response.content else {},
+                status=response.status_code
+            )
+        except requests.RequestException as e:
+            return Response(
+                {'error': f'Courses service unavailable: {str(e)}'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+
+class LessonDetailProxyView(BaseLessonsProxyView):
+    """Proxy for lesson detail"""
+    def get(self, request, pk):
+        return self._proxy(f'{pk}/')
+
+
+class LessonCompleteProxyView(BaseLessonsProxyView):
+    """Proxy for lesson completion"""
+    def post(self, request, pk):
+        return self._proxy(f'{pk}/complete/', method='POST', data=request.data)
+
+
 class BaseStreamingProxyView(APIView):
     """Base proxy view for streaming requests"""
     permission_classes = [IsAuthenticated]
