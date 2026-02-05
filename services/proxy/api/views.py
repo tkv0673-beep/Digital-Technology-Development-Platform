@@ -221,12 +221,11 @@ class ChatBotMessageProxyView(BaseChatBotProxyView):
     """Proxy for chatbot messages"""
     def post(self, request):
         headers = {'Authorization': self.request.META.get('HTTP_AUTHORIZATION', '')}
-        headers['Content-Type'] = 'application/json'
         url = f"{settings.CHATBOT_SERVICE_URL}/api/chatbot/message/"
         try:
-            # Ensure data is properly serialized
-            import json
+            # Get data from request
             data = request.data if hasattr(request, 'data') else {}
+            # Ensure proper encoding
             response = requests.post(
                 url, 
                 json=data, 
@@ -235,15 +234,25 @@ class ChatBotMessageProxyView(BaseChatBotProxyView):
             )
             if response.content:
                 try:
+                    # Try to decode as UTF-8 first
+                    response.encoding = 'utf-8'
                     return Response(
                         response.json(),
                         status=response.status_code
                     )
-                except ValueError:
-                    return Response(
-                        {'error': f'Invalid response from chatbot service: {response.text[:100]}'},
-                        status=status.HTTP_502_BAD_GATEWAY
-                    )
+                except (ValueError, UnicodeDecodeError) as e:
+                    # If JSON parsing fails, try to get text
+                    try:
+                        text = response.text
+                        return Response(
+                            {'error': f'Invalid response from chatbot service: {text[:200]}'},
+                            status=status.HTTP_502_BAD_GATEWAY
+                        )
+                    except:
+                        return Response(
+                            {'error': f'Invalid response from chatbot service: {str(e)}'},
+                            status=status.HTTP_502_BAD_GATEWAY
+                        )
             return Response({}, status=response.status_code)
         except requests.RequestException as e:
             return Response(
