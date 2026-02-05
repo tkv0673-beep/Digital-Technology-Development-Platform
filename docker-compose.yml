@@ -1,0 +1,268 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: dt-platform-postgres
+    environment:
+      POSTGRES_DB: dt_platform
+      POSTGRES_USER: dt_user
+      POSTGRES_PASSWORD: dt_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dt_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: dt-platform-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ Message Queue
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: dt-platform-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: dt_user
+      RABBITMQ_DEFAULT_PASS: dt_password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO (S3 compatible storage)
+  minio:
+    image: minio/minio:latest
+    container_name: dt-platform-minio
+    environment:
+      MINIO_ROOT_USER: dt_admin
+      MINIO_ROOT_PASSWORD: dt_password123
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # Tokens Service
+  tokens-service:
+    build:
+      context: ./services/tokens
+      dockerfile: Dockerfile
+    container_name: dt-platform-tokens
+    environment:
+      - DATABASE_URL=postgresql://dt_user:dt_password@postgres:5432/dt_platform
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-change-in-production}
+      - DEBUG=False
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/tokens:/app
+    ports:
+      - "8001:8000"
+
+  # Notifications Service
+  notifications-service:
+    build:
+      context: ./services/notifications
+      dockerfile: Dockerfile
+    container_name: dt-platform-notifications
+    environment:
+      - DATABASE_URL=postgresql://dt_user:dt_password@postgres:5432/dt_platform
+      - REDIS_URL=redis://redis:6379/1
+      - RABBITMQ_URL=amqp://dt_user:dt_password@rabbitmq:5672/
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-change-in-production}
+      - DEBUG=False
+      - EMAIL_HOST=${EMAIL_HOST:-smtp.gmail.com}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER:-}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./services/notifications:/app
+    ports:
+      - "8002:8000"
+
+  # Streaming Service
+  streaming-service:
+    build:
+      context: ./services/streaming
+      dockerfile: Dockerfile
+    container_name: dt-platform-streaming
+    environment:
+      - DATABASE_URL=postgresql://dt_user:dt_password@postgres:5432/dt_platform
+      - REDIS_URL=redis://redis:6379/2
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=dt_admin
+      - S3_SECRET_KEY=dt_password123
+      - S3_BUCKET=video-storage
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-change-in-production}
+      - DEBUG=False
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./services/streaming:/app
+    ports:
+      - "8003:8000"
+
+  # Courses Service
+  courses-service:
+    build:
+      context: ./services/courses
+      dockerfile: Dockerfile
+    container_name: dt-platform-courses
+    environment:
+      - DATABASE_URL=postgresql://dt_user:dt_password@postgres:5432/dt_platform
+      - REDIS_URL=redis://redis:6379/3
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=dt_admin
+      - S3_SECRET_KEY=dt_password123
+      - S3_BUCKET=courses-storage
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-change-in-production}
+      - DEBUG=False
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./services/courses:/app
+    ports:
+      - "8004:8000"
+
+  # ChatBot Service
+  chatbot-service:
+    build:
+      context: ./services/chatbot
+      dockerfile: Dockerfile
+    container_name: dt-platform-chatbot
+    environment:
+      - DATABASE_URL=postgresql://dt_user:dt_password@postgres:5432/dt_platform
+      - REDIS_URL=redis://redis:6379/4
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-change-in-production}
+      - DEBUG=False
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/chatbot:/app
+    ports:
+      - "8005:8000"
+
+  # Proxy Service (API Gateway)
+  proxy-service:
+    build:
+      context: ./services/proxy
+      dockerfile: Dockerfile
+    container_name: dt-platform-proxy
+    environment:
+      - DATABASE_URL=postgresql://dt_user:dt_password@postgres:5432/dt_platform
+      - REDIS_URL=redis://redis:6379/5
+      - TOKENS_SERVICE_URL=http://tokens-service:8000
+      - NOTIFICATIONS_SERVICE_URL=http://notifications-service:8000
+      - STREAMING_SERVICE_URL=http://streaming-service:8000
+      - COURSES_SERVICE_URL=http://courses-service:8000
+      - CHATBOT_SERVICE_URL=http://chatbot-service:8000
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-change-in-production}
+      - DEBUG=False
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      tokens-service:
+        condition: service_started
+      notifications-service:
+        condition: service_started
+      streaming-service:
+        condition: service_started
+      courses-service:
+        condition: service_started
+      chatbot-service:
+        condition: service_started
+    volumes:
+      - ./services/proxy:/app
+    ports:
+      - "8000:8000"
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: dt-platform-frontend
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - proxy-service
+
+  # Nginx
+  nginx:
+    image: nginx:alpine
+    container_name: dt-platform-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - frontend
+      - proxy-service
+    restart: always
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  minio_data:
+
