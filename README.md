@@ -116,7 +116,7 @@ docker-compose exec tokens-service coverage report
 
 ## Управление проектом
 
-### Make команды
+### Linux/Mac - Make команды
 ```bash
 make build      # Собрать все Docker образы
 make up         # Запустить все сервисы
@@ -125,6 +125,25 @@ make migrate    # Применить миграции
 make test       # Запустить тесты
 make clean      # Очистить контейнеры и volumes
 ```
+
+### Windows - PowerShell скрипты
+```powershell
+.\Makefile.ps1 build      # Собрать все Docker образы
+.\Makefile.ps1 up         # Запустить все сервисы
+.\Makefile.ps1 down       # Остановить все сервисы
+.\Makefile.ps1 migrate    # Применить миграции
+.\Makefile.ps1 test       # Запустить тесты
+.\Makefile.ps1 clean      # Очистить контейнеры и volumes
+```
+
+Или используйте скрипты напрямую:
+```powershell
+.\scripts\migrate.ps1
+.\scripts\test.ps1
+.\scripts\up.ps1
+```
+
+См. [README_WINDOWS.md](README_WINDOWS.md) для подробной информации о работе в Windows.
 
 ### Скрипты
 - `scripts/init_db.sh` - Инициализация базы данных
