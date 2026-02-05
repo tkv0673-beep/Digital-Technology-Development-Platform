@@ -1,0 +1,2 @@
+# Courses service configuration
+
