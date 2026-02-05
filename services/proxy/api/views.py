@@ -221,13 +221,30 @@ class ChatBotMessageProxyView(BaseChatBotProxyView):
     """Proxy for chatbot messages"""
     def post(self, request):
         headers = {'Authorization': self.request.META.get('HTTP_AUTHORIZATION', '')}
+        headers['Content-Type'] = 'application/json'
         url = f"{settings.CHATBOT_SERVICE_URL}/api/chatbot/message/"
         try:
-            response = requests.post(url, json=request.data or {}, headers=headers, timeout=30)
-            return Response(
-                response.json() if response.content else {},
-                status=response.status_code
+            # Ensure data is properly serialized
+            import json
+            data = request.data if hasattr(request, 'data') else {}
+            response = requests.post(
+                url, 
+                json=data, 
+                headers=headers, 
+                timeout=30
             )
+            if response.content:
+                try:
+                    return Response(
+                        response.json(),
+                        status=response.status_code
+                    )
+                except ValueError:
+                    return Response(
+                        {'error': f'Invalid response from chatbot service: {response.text[:100]}'},
+                        status=status.HTTP_502_BAD_GATEWAY
+                    )
+            return Response({}, status=response.status_code)
         except requests.RequestException as e:
             return Response(
                 {'error': f'Chatbot service unavailable: {str(e)}'},
