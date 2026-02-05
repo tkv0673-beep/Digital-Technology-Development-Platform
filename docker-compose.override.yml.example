@@ -1,0 +1,19 @@
+# Example override file for local development
+# Copy this to docker-compose.override.yml and customize
+
+version: '3.8'
+
+services:
+  proxy-service:
+    environment:
+      - DEBUG=True
+    volumes:
+      - ./services/proxy:/app
+
+  frontend:
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
