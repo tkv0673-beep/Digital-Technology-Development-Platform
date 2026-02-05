@@ -68,17 +68,29 @@ class CourseViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def enroll(self, request, pk=None):
         """Enroll in course"""
+        if not request.user.is_authenticated:
+            return Response(
+                {'error': 'Authentication required'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
         course = self.get_object()
-        enrollment = CourseService.enroll_user(request.user_id, course.id)
+        user_id = getattr(request.user, 'user_id', request.user.id)
+        enrollment = CourseService.enroll_user(user_id, course.id)
         serializer = EnrollmentSerializer(enrollment)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
     @action(detail=True, methods=['get'])
     def progress(self, request, pk=None):
         """Get course progress"""
+        if not request.user.is_authenticated:
+            return Response(
+                {'error': 'Authentication required'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
         course = self.get_object()
+        user_id = getattr(request.user, 'user_id', request.user.id)
         try:
-            enrollment = Enrollment.objects.get(user_id=request.user_id, course=course)
+            enrollment = Enrollment.objects.get(user_id=user_id, course=course)
             serializer = EnrollmentSerializer(enrollment)
             return Response(serializer.data)
         except Enrollment.DoesNotExist:
