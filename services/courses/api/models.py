@@ -107,6 +107,7 @@ class Achievement(models.Model):
     icon = models.ImageField(upload_to='achievements/', blank=True, null=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='achievements', null=True, blank=True)
     condition = models.JSONField(default=dict, help_text='Conditions to unlock achievement')
+    created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         db_table = 'achievements'

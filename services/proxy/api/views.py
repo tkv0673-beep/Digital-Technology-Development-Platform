@@ -78,17 +78,18 @@ class AuthProxyView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
     
-    def register(self, request):
-        return self._proxy('register/', data=request.data)
-    
-    def login(self, request):
-        return self._proxy('login/', data=request.data)
-    
-    def refresh(self, request):
-        return self._proxy('refresh/', data=request.data)
-    
-    def logout(self, request):
-        return self._proxy('logout/', data=request.data)
+    def post(self, request):
+        """Handle POST requests - route based on URL"""
+        path = request.path.rstrip('/').split('/')[-1]
+        if path == 'register':
+            return self._proxy('register/', data=request.data)
+        elif path == 'login':
+            return self._proxy('login/', data=request.data)
+        elif path == 'refresh':
+            return self._proxy('refresh/', data=request.data)
+        elif path == 'logout':
+            return self._proxy('logout/', data=request.data)
+        return Response({'error': 'Invalid endpoint'}, status=status.HTTP_404_NOT_FOUND)
 
 
 class CoursesProxyView(APIView):

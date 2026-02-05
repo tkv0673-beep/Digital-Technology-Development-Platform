@@ -35,8 +35,8 @@ class LessonProgressAdmin(admin.ModelAdmin):
 
 @admin.register(Achievement)
 class AchievementAdmin(admin.ModelAdmin):
-    list_display = ('name', 'course', 'created_at')
-    list_filter = ('course', 'created_at')
+    list_display = ('name', 'course')
+    list_filter = ('course',)
     search_fields = ('name', 'description')
 
 
