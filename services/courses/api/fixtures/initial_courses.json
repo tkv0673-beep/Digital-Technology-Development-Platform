@@ -1,0 +1,212 @@
+[
+  {
+    "model": "api.course",
+    "pk": 1,
+    "fields": {
+      "title": "Основы смартфона",
+      "description": "Научитесь основам работы со смартфоном: включение, выключение, регулировка громкости и многое другое.",
+      "difficulty": "basic",
+      "mentor_id": 1,
+      "is_published": true,
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.course",
+    "pk": 2,
+    "fields": {
+      "title": "Основы смартфона (Расширенный)",
+      "description": "Расширенный курс по работе со смартфоном: подключение к Wi-Fi, установка приложений из RuStore.",
+      "difficulty": "advanced",
+      "mentor_id": 1,
+      "is_published": true,
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.course",
+    "pk": 3,
+    "fields": {
+      "title": "Работа с мессенджером MAX",
+      "description": "Освойте работу с мессенджером MAX: отправка сообщений, фото, создание чатов.",
+      "difficulty": "basic",
+      "mentor_id": 1,
+      "is_published": true,
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.course",
+    "pk": 4,
+    "fields": {
+      "title": "Работа с мессенджером MAX (Расширенный)",
+      "description": "Расширенный курс по мессенджеру MAX: групповые чаты, эмодзи, стикеры.",
+      "difficulty": "advanced",
+      "mentor_id": 1,
+      "is_published": true,
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.course",
+    "pk": 5,
+    "fields": {
+      "title": "Онлайн покупки",
+      "description": "Научитесь делать покупки онлайн: поиск товаров, добавление в корзину.",
+      "difficulty": "basic",
+      "mentor_id": 1,
+      "is_published": true,
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.course",
+    "pk": 6,
+    "fields": {
+      "title": "Онлайн покупки (Расширенный)",
+      "description": "Расширенный курс по онлайн покупкам: оформление доставки, выбор способа оплаты.",
+      "difficulty": "advanced",
+      "mentor_id": 1,
+      "is_published": true,
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.course",
+    "pk": 7,
+    "fields": {
+      "title": "Госуслуги",
+      "description": "Освойте работу с порталом Госуслуги: регистрация, запись к врачу.",
+      "difficulty": "basic",
+      "mentor_id": 1,
+      "is_published": true,
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.course",
+    "pk": 8,
+    "fields": {
+      "title": "Госуслуги (Расширенный)",
+      "description": "Расширенный курс по Госуслугам: получение электронных документов.",
+      "difficulty": "advanced",
+      "mentor_id": 1,
+      "is_published": true,
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.lesson",
+    "pk": 1,
+    "fields": {
+      "course": 1,
+      "title": "Включение и выключение смартфона",
+      "description": "Научитесь правильно включать и выключать смартфон",
+      "order": 1,
+      "content": {
+        "type": "simulation",
+        "steps": [
+          {"action": "press_power", "description": "Нажмите и удерживайте кнопку питания"}
+        ]
+      },
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.lesson",
+    "pk": 2,
+    "fields": {
+      "course": 1,
+      "title": "Регулировка громкости",
+      "description": "Научитесь регулировать громкость звука",
+      "order": 2,
+      "content": {
+        "type": "simulation",
+        "steps": [
+          {"action": "press_volume_up", "description": "Нажмите кнопку увеличения громкости"},
+          {"action": "press_volume_down", "description": "Нажмите кнопку уменьшения громкости"}
+        ]
+      },
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.lesson",
+    "pk": 3,
+    "fields": {
+      "course": 2,
+      "title": "Подключение к Wi-Fi",
+      "description": "Научитесь подключаться к беспроводной сети Wi-Fi",
+      "order": 1,
+      "content": {
+        "type": "simulation",
+        "steps": [
+          {"action": "open_settings", "description": "Откройте настройки"},
+          {"action": "select_wifi", "description": "Выберите Wi-Fi"},
+          {"action": "select_network", "description": "Выберите сеть"},
+          {"action": "enter_password", "description": "Введите пароль"},
+          {"action": "connect", "description": "Подключитесь"}
+        ]
+      },
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.lesson",
+    "pk": 4,
+    "fields": {
+      "course": 2,
+      "title": "Установка приложения из RuStore",
+      "description": "Научитесь устанавливать приложения из магазина RuStore",
+      "order": 2,
+      "content": {
+        "type": "simulation",
+        "steps": [
+          {"action": "open_rustore", "description": "Откройте RuStore"},
+          {"action": "search_app", "description": "Найдите приложение"},
+          {"action": "select_app", "description": "Выберите приложение"},
+          {"action": "install", "description": "Установите приложение"}
+        ]
+      },
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.achievement",
+    "pk": 1,
+    "fields": {
+      "name": "Первый шаг",
+      "description": "Завершите первый урок",
+      "condition": {
+        "type": "lesson_completion",
+        "lesson_count": 1
+      },
+      "created_at": "2024-01-01T10:00:00Z"
+    }
+  },
+  {
+    "model": "api.achievement",
+    "pk": 2,
+    "fields": {
+      "name": "Мастер курса",
+      "description": "Завершите весь курс",
+      "condition": {
+        "type": "course_completion"
+      },
+      "created_at": "2024-01-01T10:00:00Z"
+    }
+  }
+]
+
