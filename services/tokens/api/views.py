@@ -52,7 +52,7 @@ class AuthViewSet(viewsets.ViewSet):
         username = serializer.validated_data['username']
         password = serializer.validated_data['password']
         
-        # Try to get user first
+        # Get user and check password directly (authenticate may not work with custom User model)
         try:
             user = User.objects.get(username=username)
             if not user.check_password(password):
@@ -61,14 +61,6 @@ class AuthViewSet(viewsets.ViewSet):
                     status=status.HTTP_401_UNAUTHORIZED
                 )
         except User.DoesNotExist:
-            return Response(
-                {'error': 'Неверные учетные данные'},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        
-        # Also try authenticate for compatibility
-        auth_user = authenticate(username=username, password=password)
-        if auth_user is None:
             return Response(
                 {'error': 'Неверные учетные данные'},
                 status=status.HTTP_401_UNAUTHORIZED
