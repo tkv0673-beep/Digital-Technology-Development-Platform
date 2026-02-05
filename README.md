@@ -102,14 +102,34 @@ docker-compose exec proxy python manage.py loaddata initial_courses
 
 ```bash
 # Запустить все тесты
-docker-compose exec proxy python manage.py test
+make test
+
+# Или для конкретного сервиса
+docker-compose exec tokens-service python manage.py test
 
 # С покрытием
-docker-compose exec proxy coverage run --source='.' manage.py test
-docker-compose exec proxy coverage report
+docker-compose exec tokens-service coverage run --source='.' manage.py test
+docker-compose exec tokens-service coverage report
 ```
 
 Покрытие тестами: 85%+
+
+## Управление проектом
+
+### Make команды
+```bash
+make build      # Собрать все Docker образы
+make up         # Запустить все сервисы
+make down       # Остановить все сервисы
+make migrate    # Применить миграции
+make test       # Запустить тесты
+make clean      # Очистить контейнеры и volumes
+```
+
+### Скрипты
+- `scripts/init_db.sh` - Инициализация базы данных
+- `scripts/create_superuser.sh` - Создание суперпользователя
+- `scripts/setup_minio.sh` - Настройка MinIO buckets
 
 ## Документация
 
