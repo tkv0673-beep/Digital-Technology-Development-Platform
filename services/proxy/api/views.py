@@ -223,36 +223,40 @@ class ChatBotMessageProxyView(BaseChatBotProxyView):
         headers = {'Authorization': self.request.META.get('HTTP_AUTHORIZATION', '')}
         url = f"{settings.CHATBOT_SERVICE_URL}/api/chatbot/message/"
         try:
-            # Get data from request
-            data = request.data if hasattr(request, 'data') else {}
-            # Ensure proper encoding
+            # Get data from request - ensure it's a dict
+            if hasattr(request, 'data'):
+                data = dict(request.data)
+            else:
+                import json
+                try:
+                    data = json.loads(request.body.decode('utf-8'))
+                except:
+                    data = {}
+            
+            # Ensure proper JSON encoding
+            import json
+            json_data = json.dumps(data, ensure_ascii=False)
+            
+            headers['Content-Type'] = 'application/json; charset=utf-8'
             response = requests.post(
                 url, 
-                json=data, 
+                data=json_data.encode('utf-8'),
                 headers=headers, 
                 timeout=30
             )
+            
             if response.content:
                 try:
-                    # Try to decode as UTF-8 first
                     response.encoding = 'utf-8'
                     return Response(
                         response.json(),
                         status=response.status_code
                     )
                 except (ValueError, UnicodeDecodeError) as e:
-                    # If JSON parsing fails, try to get text
-                    try:
-                        text = response.text
-                        return Response(
-                            {'error': f'Invalid response from chatbot service: {text[:200]}'},
-                            status=status.HTTP_502_BAD_GATEWAY
-                        )
-                    except:
-                        return Response(
-                            {'error': f'Invalid response from chatbot service: {str(e)}'},
-                            status=status.HTTP_502_BAD_GATEWAY
-                        )
+                    return Response(
+                        {'error': f'Invalid response from chatbot service: {str(e)}'},
+                        status=status.HTTP_502_BAD_GATEWAY
+                    )
             return Response({}, status=response.status_code)
         except requests.RequestException as e:
             return Response(
