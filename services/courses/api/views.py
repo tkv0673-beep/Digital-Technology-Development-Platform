@@ -166,3 +166,65 @@ class AchievementViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = UserAchievementSerializer(achievements, many=True)
         return Response(serializer.data)
 
+
+class UserStatisticsViewSet(viewsets.ViewSet):
+    """
+    User statistics endpoints
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @action(detail=False, methods=['get'])
+    def profile(self, request):
+        """Get user statistics for profile"""
+        if not request.user.is_authenticated:
+            return Response(
+                {'error': 'Authentication required'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        user_id = getattr(request.user, 'user_id', request.user.id)
+        
+        # Get enrollments
+        enrollments = Enrollment.objects.filter(user_id=user_id).select_related('course')
+        total_courses = enrollments.count()
+        completed_courses = enrollments.filter(completed_at__isnull=False).count()
+        
+        # Get progress
+        total_lessons = 0
+        completed_lessons = 0
+        for enrollment in enrollments:
+            course_lessons = enrollment.course.lessons.count()
+            total_lessons += course_lessons
+            completed_lessons += LessonProgress.objects.filter(
+                user_id=user_id,
+                lesson__course=enrollment.course,
+                completed_at__isnull=False
+            ).count()
+        
+        # Get achievements
+        achievements_count = UserAchievement.objects.filter(user_id=user_id).count()
+        
+        # Calculate average progress
+        avg_progress = 0
+        if enrollments.exists():
+            total_progress = sum(e.progress_percentage for e in enrollments)
+            avg_progress = total_progress / enrollments.count()
+        
+        return Response({
+            'total_courses': total_courses,
+            'completed_courses': completed_courses,
+            'total_lessons': total_lessons,
+            'completed_lessons': completed_lessons,
+            'achievements_count': achievements_count,
+            'average_progress': round(avg_progress, 2),
+            'enrollments': [
+                {
+                    'course_id': e.course.id,
+                    'course_title': e.course.title,
+                    'progress_percentage': e.progress_percentage,
+                    'enrolled_at': e.enrolled_at,
+                    'completed_at': e.completed_at
+                }
+                for e in enrollments[:10]  # Last 10 enrollments
+            ]
+        })
+
