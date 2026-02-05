@@ -6,7 +6,7 @@ from django.conf import settings
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.views import APIView
 
 
@@ -105,7 +105,7 @@ class LogoutProxyView(BaseAuthProxyView):
 
 class BaseCoursesProxyView(APIView):
     """Base proxy view for courses requests"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
     
     def _proxy(self, path, method='GET', data=None):
         headers = {'Authorization': self.request.META.get('HTTP_AUTHORIZATION', '')}
