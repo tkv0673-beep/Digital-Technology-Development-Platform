@@ -13,6 +13,7 @@ urlpatterns = [
     path('auth/', include('api.auth_urls')),
     path('courses/', include('api.courses_urls')),
     path('lessons/', include('api.lessons_urls')),
+    path('statistics/', include('api.statistics_urls')),
     path('streaming/', include('api.streaming_urls')),
     path('chatbot/', include('api.chatbot_urls')),
 ]

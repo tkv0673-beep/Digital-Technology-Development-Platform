@@ -210,6 +210,36 @@ class LessonCompleteProxyView(BaseLessonsProxyView):
         return self._proxy(f'{pk}/complete/', method='POST', data=request.data)
 
 
+class BaseStatisticsProxyView(APIView):
+    """Base proxy view for statistics requests"""
+    permission_classes = [IsAuthenticated]
+    
+    def _proxy(self, path, method='GET'):
+        headers = {'Authorization': self.request.META.get('HTTP_AUTHORIZATION', '')}
+        url = f"{settings.COURSES_SERVICE_URL}/api/statistics/{path}"
+        try:
+            if method == 'GET':
+                response = requests.get(url, headers=headers, timeout=10)
+            elif method == 'POST':
+                response = requests.post(url, json={}, headers=headers, timeout=10)
+            
+            return Response(
+                response.json() if response.content else {},
+                status=response.status_code
+            )
+        except requests.RequestException as e:
+            return Response(
+                {'error': f'Courses service unavailable: {str(e)}'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+
+class UserStatisticsProxyView(BaseStatisticsProxyView):
+    """Proxy for user statistics"""
+    def get(self, request):
+        return self._proxy('profile/')
+
+
 class BaseStreamingProxyView(APIView):
     """Base proxy view for streaming requests"""
     permission_classes = [IsAuthenticated]
