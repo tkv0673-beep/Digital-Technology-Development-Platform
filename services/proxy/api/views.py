@@ -1,0 +1,214 @@
+"""
+Proxy views - routes requests to appropriate microservices
+"""
+import requests
+from django.conf import settings
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.views import APIView
+
+
+class ProxyViewSet(viewsets.ViewSet):
+    """
+    API Gateway viewset that proxies requests to microservices
+    """
+    permission_classes = [AllowAny]
+    
+    def _proxy_request(self, service_url, path, method='GET', data=None, headers=None):
+        """Helper method to proxy requests to microservices"""
+        url = f"{service_url}{path}"
+        request_headers = {'Content-Type': 'application/json'}
+        
+        if headers:
+            request_headers.update(headers)
+        
+        try:
+            if method == 'GET':
+                response = requests.get(url, headers=request_headers, timeout=10)
+            elif method == 'POST':
+                response = requests.post(url, json=data, headers=request_headers, timeout=10)
+            elif method == 'PUT':
+                response = requests.put(url, json=data, headers=request_headers, timeout=10)
+            elif method == 'PATCH':
+                response = requests.patch(url, json=data, headers=request_headers, timeout=10)
+            elif method == 'DELETE':
+                response = requests.delete(url, headers=request_headers, timeout=10)
+            else:
+                return Response(
+                    {'error': 'Method not allowed'},
+                    status=status.HTTP_405_METHOD_NOT_ALLOWED
+                )
+            
+            return Response(
+                response.json() if response.content else {},
+                status=response.status_code
+            )
+        except requests.RequestException as e:
+            return Response(
+                {'error': f'Service unavailable: {str(e)}'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+
+class AuthProxyView(APIView):
+    """Proxy for authentication requests to tokens service"""
+    permission_classes = [AllowAny]
+    
+    def _proxy(self, path, method='POST', data=None):
+        headers = {}
+        if hasattr(self.request, 'META') and 'HTTP_AUTHORIZATION' in self.request.META:
+            headers['Authorization'] = self.request.META['HTTP_AUTHORIZATION']
+        
+        url = f"{settings.TOKENS_SERVICE_URL}/api/auth/{path}"
+        try:
+            if method == 'POST':
+                response = requests.post(url, json=data or {}, headers=headers, timeout=10)
+            elif method == 'GET':
+                response = requests.get(url, headers=headers, timeout=10)
+            
+            return Response(
+                response.json() if response.content else {},
+                status=response.status_code
+            )
+        except requests.RequestException as e:
+            return Response(
+                {'error': f'Authentication service unavailable: {str(e)}'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+    
+    def register(self, request):
+        return self._proxy('register/', data=request.data)
+    
+    def login(self, request):
+        return self._proxy('login/', data=request.data)
+    
+    def refresh(self, request):
+        return self._proxy('refresh/', data=request.data)
+    
+    def logout(self, request):
+        return self._proxy('logout/', data=request.data)
+
+
+class CoursesProxyView(APIView):
+    """Proxy for courses requests"""
+    permission_classes = [IsAuthenticated]
+    
+    def _proxy(self, path, method='GET', data=None):
+        headers = {'Authorization': self.request.META.get('HTTP_AUTHORIZATION', '')}
+        url = f"{settings.COURSES_SERVICE_URL}/api/courses/{path}"
+        try:
+            if method == 'GET':
+                response = requests.get(url, headers=headers, timeout=10)
+            elif method == 'POST':
+                response = requests.post(url, json=data or {}, headers=headers, timeout=10)
+            elif method == 'PUT':
+                response = requests.put(url, json=data or {}, headers=headers, timeout=10)
+            elif method == 'DELETE':
+                response = requests.delete(url, headers=headers, timeout=10)
+            
+            return Response(
+                response.json() if response.content else {},
+                status=response.status_code
+            )
+        except requests.RequestException as e:
+            return Response(
+                {'error': f'Courses service unavailable: {str(e)}'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+    
+    def list(self, request):
+        return self._proxy('')
+    
+    def create(self, request):
+        return self._proxy('', method='POST', data=request.data)
+    
+    def retrieve(self, request, pk):
+        return self._proxy(f'{pk}/')
+    
+    def update(self, request, pk):
+        return self._proxy(f'{pk}/', method='PUT', data=request.data)
+    
+    def destroy(self, request, pk):
+        return self._proxy(f'{pk}/', method='DELETE')
+    
+    def lessons(self, request, pk):
+        return self._proxy(f'{pk}/lessons/')
+    
+    def enroll(self, request, pk):
+        return self._proxy(f'{pk}/enroll/', method='POST', data=request.data)
+    
+    def progress(self, request, pk):
+        return self._proxy(f'{pk}/progress/')
+
+
+class StreamingProxyView(APIView):
+    """Proxy for streaming requests"""
+    permission_classes = [IsAuthenticated]
+    
+    def _proxy(self, path, method='GET'):
+        headers = {'Authorization': self.request.META.get('HTTP_AUTHORIZATION', '')}
+        url = f"{settings.STREAMING_SERVICE_URL}/api/streaming/{path}"
+        try:
+            if method == 'GET':
+                response = requests.get(url, headers=headers, stream=True, timeout=30)
+                return Response(
+                    response.content,
+                    status=response.status_code,
+                    content_type=response.headers.get('Content-Type', 'video/mp4')
+                )
+        except requests.RequestException as e:
+            return Response(
+                {'error': f'Streaming service unavailable: {str(e)}'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+    
+    def stream(self, request, video_id):
+        return self._proxy(f'video/{video_id}/')
+    
+    def info(self, request, video_id):
+        headers = {'Authorization': self.request.META.get('HTTP_AUTHORIZATION', '')}
+        url = f"{settings.STREAMING_SERVICE_URL}/api/streaming/video/{video_id}/info/"
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            return Response(
+                response.json() if response.content else {},
+                status=response.status_code
+            )
+        except requests.RequestException as e:
+            return Response(
+                {'error': f'Streaming service unavailable: {str(e)}'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+
+class ChatBotProxyView(APIView):
+    """Proxy for chatbot requests"""
+    permission_classes = [IsAuthenticated]
+    
+    def _proxy(self, path, method='POST', data=None):
+        headers = {'Authorization': self.request.META.get('HTTP_AUTHORIZATION', '')}
+        url = f"{settings.CHATBOT_SERVICE_URL}/api/chatbot/{path}"
+        try:
+            if method == 'POST':
+                response = requests.post(url, json=data or {}, headers=headers, timeout=30)
+            elif method == 'GET':
+                response = requests.get(url, headers=headers, timeout=10)
+            
+            return Response(
+                response.json() if response.content else {},
+                status=response.status_code
+            )
+        except requests.RequestException as e:
+            return Response(
+                {'error': f'Chatbot service unavailable: {str(e)}'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+    
+    def message(self, request):
+        return self._proxy('message/', data=request.data)
+    
+    def context(self, request, lesson_id):
+        return self._proxy(f'context/{lesson_id}/', method='GET')
+
