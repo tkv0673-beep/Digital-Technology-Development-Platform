@@ -221,22 +221,23 @@ class ChatBotMessageProxyView(BaseChatBotProxyView):
     """Proxy for chatbot messages"""
     def post(self, request):
         headers = {'Authorization': self.request.META.get('HTTP_AUTHORIZATION', '')}
-        headers['Content-Type'] = 'application/json'
         url = f"{settings.CHATBOT_SERVICE_URL}/api/chatbot/message/"
         try:
-            # Get data from request.data (already parsed by DRF) and re-encode
+            # Get data from request.data (already parsed by DRF)
+            # Use json parameter to ensure proper UTF-8 encoding
             if hasattr(request, 'data') and request.data:
-                import json
-                # Re-encode to ensure UTF-8
-                json_str = json.dumps(request.data, ensure_ascii=False)
-                body = json_str.encode('utf-8')
+                data = dict(request.data)
             else:
-                # Fallback to raw body
-                body = request.body if hasattr(request, 'body') and request.body else b'{}'
+                # Fallback: try to parse body
+                try:
+                    import json
+                    data = json.loads(request.body.decode('utf-8')) if hasattr(request, 'body') and request.body else {}
+                except:
+                    data = {}
             
             response = requests.post(
                 url, 
-                data=body,
+                json=data,  # Use json parameter for proper UTF-8 encoding
                 headers=headers, 
                 timeout=30
             )
