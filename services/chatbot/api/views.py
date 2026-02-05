@@ -39,8 +39,9 @@ class ChatBotViewSet(viewsets.ViewSet):
         )
         
         # Save message
+        user_id = getattr(request.user, 'user_id', request.user.id)
         chat_message = ChatBotService.save_message(
-            user_id=request.user_id,
+            user_id=user_id,
             message=user_message,
             response=response_text,
             lesson_id=lesson_id,
@@ -71,7 +72,8 @@ class ChatBotViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def history(self, request):
         """Get chat history"""
-        messages = ChatMessage.objects.filter(user_id=request.user_id).order_by('-created_at')[:50]
+        user_id = getattr(request.user, 'user_id', request.user.id)
+        messages = ChatMessage.objects.filter(user_id=user_id).order_by('-created_at')[:50]
         serializer = ChatMessageSerializer(messages, many=True)
         return Response(serializer.data)
 
