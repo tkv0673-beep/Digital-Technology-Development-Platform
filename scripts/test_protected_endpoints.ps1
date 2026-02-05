@@ -33,10 +33,13 @@ try {
     Write-Host "`n3. Testing chatbot message..." -ForegroundColor Yellow
     $chatBody = @{
         message = "Привет, как дела?"
-    } | ConvertTo-Json
+    } | ConvertTo-Json -Compress
+    
+    # Ensure UTF-8 encoding
+    $utf8Bytes = [System.Text.Encoding]::UTF8.GetBytes($chatBody)
     
     try {
-        $chatResponse = Invoke-RestMethod -Uri "http://localhost:8000/api/chatbot/message/" -Method Post -Body $chatBody -Headers $headers -ContentType "application/json"
+        $chatResponse = Invoke-RestMethod -Uri "http://localhost:8000/api/chatbot/message/" -Method Post -Body $utf8Bytes -Headers $headers -ContentType "application/json; charset=utf-8"
         Write-Host "Chatbot response successful!" -ForegroundColor Green
         Write-Host "Response: $($chatResponse | ConvertTo-Json)" -ForegroundColor Cyan
     } catch {
