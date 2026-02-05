@@ -154,6 +154,36 @@ class AuthViewSet(viewsets.ViewSet):
         TokenService.use_password_reset_token(token)
         
         return Response({'message': 'Пароль успешно изменен'})
+    
+    @action(detail=False, methods=['get'])
+    def me(self, request):
+        """Get current user profile"""
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return Response(
+                {'error': 'Authentication required'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        token = auth_header.split(' ')[1]
+        payload = TokenService.validate_access_token(token)
+        
+        if not payload:
+            return Response(
+                {'error': 'Invalid token'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        user_id = payload.get('user_id')
+        try:
+            user = User.objects.get(id=user_id)
+            serializer = UserSerializer(user)
+            return Response(serializer.data)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class TokenViewSet(viewsets.ViewSet):
