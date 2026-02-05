@@ -103,8 +103,8 @@ class LogoutProxyView(BaseAuthProxyView):
         return self._proxy('logout/', data=request.data)
 
 
-class CoursesProxyView(APIView):
-    """Proxy for courses requests"""
+class BaseCoursesProxyView(APIView):
+    """Base proxy view for courses requests"""
     permission_classes = [IsAuthenticated]
     
     def _proxy(self, path, method='GET', data=None):
@@ -129,57 +129,74 @@ class CoursesProxyView(APIView):
                 {'error': f'Courses service unavailable: {str(e)}'},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
-    
-    def list(self, request):
+
+
+class CoursesListProxyView(BaseCoursesProxyView):
+    """Proxy for courses list and create"""
+    def get(self, request):
         return self._proxy('')
     
-    def create(self, request):
+    def post(self, request):
         return self._proxy('', method='POST', data=request.data)
-    
-    def retrieve(self, request, pk):
+
+
+class CoursesDetailProxyView(BaseCoursesProxyView):
+    """Proxy for course detail, update and delete"""
+    def get(self, request, pk):
         return self._proxy(f'{pk}/')
     
-    def update(self, request, pk):
+    def put(self, request, pk):
         return self._proxy(f'{pk}/', method='PUT', data=request.data)
     
-    def destroy(self, request, pk):
+    def delete(self, request, pk):
         return self._proxy(f'{pk}/', method='DELETE')
-    
-    def lessons(self, request, pk):
+
+
+class CoursesLessonsProxyView(BaseCoursesProxyView):
+    """Proxy for course lessons"""
+    def get(self, request, pk):
         return self._proxy(f'{pk}/lessons/')
-    
-    def enroll(self, request, pk):
+
+
+class CoursesEnrollProxyView(BaseCoursesProxyView):
+    """Proxy for course enrollment"""
+    def post(self, request, pk):
         return self._proxy(f'{pk}/enroll/', method='POST', data=request.data)
-    
-    def progress(self, request, pk):
+
+
+class CoursesProgressProxyView(BaseCoursesProxyView):
+    """Proxy for course progress"""
+    def get(self, request, pk):
         return self._proxy(f'{pk}/progress/')
 
 
-class StreamingProxyView(APIView):
-    """Proxy for streaming requests"""
+class BaseStreamingProxyView(APIView):
+    """Base proxy view for streaming requests"""
     permission_classes = [IsAuthenticated]
-    
-    def _proxy(self, path, method='GET'):
+
+
+class StreamingVideoProxyView(BaseStreamingProxyView):
+    """Proxy for video streaming"""
+    def get(self, request, video_id):
         headers = {'Authorization': self.request.META.get('HTTP_AUTHORIZATION', '')}
-        url = f"{settings.STREAMING_SERVICE_URL}/api/streaming/{path}"
+        url = f"{settings.STREAMING_SERVICE_URL}/api/streaming/video/{video_id}/"
         try:
-            if method == 'GET':
-                response = requests.get(url, headers=headers, stream=True, timeout=30)
-                return Response(
-                    response.content,
-                    status=response.status_code,
-                    content_type=response.headers.get('Content-Type', 'video/mp4')
-                )
+            response = requests.get(url, headers=headers, stream=True, timeout=30)
+            return Response(
+                response.content,
+                status=response.status_code,
+                content_type=response.headers.get('Content-Type', 'video/mp4')
+            )
         except requests.RequestException as e:
             return Response(
                 {'error': f'Streaming service unavailable: {str(e)}'},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
-    
-    def stream(self, request, video_id):
-        return self._proxy(f'video/{video_id}/')
-    
-    def info(self, request, video_id):
+
+
+class StreamingVideoInfoProxyView(BaseStreamingProxyView):
+    """Proxy for video info"""
+    def get(self, request, video_id):
         headers = {'Authorization': self.request.META.get('HTTP_AUTHORIZATION', '')}
         url = f"{settings.STREAMING_SERVICE_URL}/api/streaming/video/{video_id}/info/"
         try:
@@ -195,19 +212,18 @@ class StreamingProxyView(APIView):
             )
 
 
-class ChatBotProxyView(APIView):
-    """Proxy for chatbot requests"""
+class BaseChatBotProxyView(APIView):
+    """Base proxy view for chatbot requests"""
     permission_classes = [IsAuthenticated]
-    
-    def _proxy(self, path, method='POST', data=None):
+
+
+class ChatBotMessageProxyView(BaseChatBotProxyView):
+    """Proxy for chatbot messages"""
+    def post(self, request):
         headers = {'Authorization': self.request.META.get('HTTP_AUTHORIZATION', '')}
-        url = f"{settings.CHATBOT_SERVICE_URL}/api/chatbot/{path}"
+        url = f"{settings.CHATBOT_SERVICE_URL}/api/chatbot/message/"
         try:
-            if method == 'POST':
-                response = requests.post(url, json=data or {}, headers=headers, timeout=30)
-            elif method == 'GET':
-                response = requests.get(url, headers=headers, timeout=10)
-            
+            response = requests.post(url, json=request.data or {}, headers=headers, timeout=30)
             return Response(
                 response.json() if response.content else {},
                 status=response.status_code
@@ -217,10 +233,22 @@ class ChatBotProxyView(APIView):
                 {'error': f'Chatbot service unavailable: {str(e)}'},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
-    
-    def message(self, request):
-        return self._proxy('message/', data=request.data)
-    
-    def context(self, request, lesson_id):
-        return self._proxy(f'context/{lesson_id}/', method='GET')
+
+
+class ChatBotContextProxyView(BaseChatBotProxyView):
+    """Proxy for chatbot context"""
+    def get(self, request, lesson_id):
+        headers = {'Authorization': self.request.META.get('HTTP_AUTHORIZATION', '')}
+        url = f"{settings.CHATBOT_SERVICE_URL}/api/chatbot/context/{lesson_id}/"
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            return Response(
+                response.json() if response.content else {},
+                status=response.status_code
+            )
+        except requests.RequestException as e:
+            return Response(
+                {'error': f'Chatbot service unavailable: {str(e)}'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
 
