@@ -1,13 +1,33 @@
-import React, { useEffect } from 'react';
-import { Box, Grid, Card, CardContent, CardMedia, Typography, Button, CircularProgress, Alert } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import {
+  Box,
+  Grid,
+  Card,
+  CardContent,
+  CardMedia,
+  Typography,
+  Button,
+  CircularProgress,
+  Alert,
+  ButtonGroup,
+} from '@mui/material';
 import { Link } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { courseStore } from '../stores/CourseStore';
+import { DIFFICULTY_LEVELS } from '../utils/constants';
 
 const CoursesPage = observer(() => {
+  const [selectedDifficulty, setSelectedDifficulty] = useState(null);
+
   useEffect(() => {
     courseStore.loadCourses();
   }, []);
+
+  const handleDifficultyChange = (level) => {
+    const newLevel = level === selectedDifficulty ? null : level;
+    setSelectedDifficulty(newLevel);
+    courseStore.loadCourses(newLevel);
+  };
 
   if (courseStore.isLoading) {
     return (
@@ -30,6 +50,25 @@ const CoursesPage = observer(() => {
       <Typography variant="h3" component="h1" gutterBottom>
         Курсы
       </Typography>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="body1" gutterBottom>
+          Выберите уровень сложности:
+        </Typography>
+        <ButtonGroup>
+          <Button
+            variant={selectedDifficulty === DIFFICULTY_LEVELS.BASIC ? 'contained' : 'outlined'}
+            onClick={() => handleDifficultyChange(DIFFICULTY_LEVELS.BASIC)}
+          >
+            Базовый
+          </Button>
+          <Button
+            variant={selectedDifficulty === DIFFICULTY_LEVELS.ADVANCED ? 'contained' : 'outlined'}
+            onClick={() => handleDifficultyChange(DIFFICULTY_LEVELS.ADVANCED)}
+          >
+            Расширенный
+          </Button>
+        </ButtonGroup>
+      </Box>
       <Grid container spacing={4} sx={{ mt: 2 }}>
         {courseStore.courses.map((course) => (
           <Grid item xs={12} sm={6} md={4} key={course.id}>

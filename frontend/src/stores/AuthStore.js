@@ -1,7 +1,4 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import axios from 'axios';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
 class AuthStore {
   user = null;
@@ -12,8 +9,14 @@ class AuthStore {
 
   constructor() {
     makeAutoObservable(this);
-    if (this.accessToken) {
-      this.loadUser();
+    // Загружаем пользователя из localStorage, если он уже сохранён
+    try {
+      const rawUser = localStorage.getItem('dtp_mock_user_v1');
+      if (rawUser) {
+        this.user = JSON.parse(rawUser);
+      }
+    } catch (e) {
+      this.user = null;
     }
   }
 
@@ -21,24 +24,29 @@ class AuthStore {
     this.isLoading = true;
     this.error = null;
     try {
-      const response = await axios.post(`${API_URL}/auth/login/`, {
-        username,
-        password,
-      });
-      
       runInAction(() => {
-        this.accessToken = response.data.access_token;
-        this.refreshToken = response.data.refresh_token;
-        this.user = response.data.user;
+        // Мок-логика авторизации: любой логин/пароль, без реального API
+        const mockUser = {
+          username,
+          email: `${username}@example.com`,
+          role: username === 'mentor' ? 'mentor' : 'mentee',
+          first_name: '',
+          last_name: '',
+          phone: '',
+        };
+        this.user = mockUser;
+        // Токены нужны только формально для существующего кода
+        this.accessToken = 'mock-access-token';
+        this.refreshToken = 'mock-refresh-token';
         localStorage.setItem('accessToken', this.accessToken);
         localStorage.setItem('refreshToken', this.refreshToken);
+        localStorage.setItem('dtp_mock_user_v1', JSON.stringify(mockUser));
         this.isLoading = false;
       });
-      
       return true;
     } catch (error) {
       runInAction(() => {
-        this.error = error.response?.data?.error || 'Ошибка входа';
+        this.error = 'Ошибка входа';
         this.isLoading = false;
       });
       return false;
@@ -49,21 +57,28 @@ class AuthStore {
     this.isLoading = true;
     this.error = null;
     try {
-      const response = await axios.post(`${API_URL}/auth/register/`, userData);
-      
       runInAction(() => {
-        this.accessToken = response.data.access_token;
-        this.refreshToken = response.data.refresh_token;
-        this.user = response.data.user;
+        // Мок-регистрация: сохраняем пользователя только на фронтенде
+        const mockUser = {
+          username: userData.username,
+          email: userData.email,
+          role: userData.role || 'mentee',
+          first_name: userData.first_name || '',
+          last_name: userData.last_name || '',
+          phone: userData.phone || '',
+        };
+        this.user = mockUser;
+        this.accessToken = 'mock-access-token';
+        this.refreshToken = 'mock-refresh-token';
         localStorage.setItem('accessToken', this.accessToken);
         localStorage.setItem('refreshToken', this.refreshToken);
+        localStorage.setItem('dtp_mock_user_v1', JSON.stringify(mockUser));
         this.isLoading = false;
       });
-      
       return true;
     } catch (error) {
       runInAction(() => {
-        this.error = error.response?.data || 'Ошибка регистрации';
+        this.error = 'Ошибка регистрации';
         this.isLoading = false;
       });
       return false;
@@ -71,46 +86,22 @@ class AuthStore {
   }
 
   async loadUser() {
-    if (!this.accessToken) return;
-    
+    // В режиме моков просто берём пользователя из localStorage
     try {
-      const response = await axios.get(`${API_URL}/auth/me/`, {
-        headers: { Authorization: `Bearer ${this.accessToken}` },
-      });
+      const rawUser = localStorage.getItem('dtp_mock_user_v1');
+      if (!rawUser) return;
+      const user = JSON.parse(rawUser);
       runInAction(() => {
-        this.user = response.data;
+        this.user = user;
       });
-    } catch (error) {
-      // Token might be expired, try refresh
-      if (error.response?.status === 401) {
-        await this.refreshAccessToken();
-      }
+    } catch (e) {
+      // игнорируем
     }
   }
 
   async refreshAccessToken() {
-    if (!this.refreshToken) {
-      this.logout();
-      return;
-    }
-    
-    try {
-      const response = await axios.post(`${API_URL}/auth/refresh/`, {
-        refresh_token: this.refreshToken,
-      });
-      
-      runInAction(() => {
-        this.accessToken = response.data.access_token;
-        this.refreshToken = response.data.refresh_token;
-        localStorage.setItem('accessToken', this.accessToken);
-        localStorage.setItem('refreshToken', this.refreshToken);
-      });
-      
-      return true;
-    } catch (error) {
-      this.logout();
-      return false;
-    }
+    // Токены моковые — просто возвращаем успех
+    return true;
   }
 
   logout() {
@@ -119,6 +110,7 @@ class AuthStore {
     this.refreshToken = null;
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('dtp_mock_user_v1');
   }
 
   get isAuthenticated() {

@@ -1,19 +1,24 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Button, Paper, CircularProgress, Alert } from '@mui/material';
+import { Box, Typography, Button, CircularProgress, Alert } from '@mui/material';
 import { observer } from 'mobx-react-lite';
 import { courseStore } from '../stores/CourseStore';
 import ChatBot from '../components/ChatBot';
+import InteractiveSimulator from '../components/InteractiveSimulator';
 
 const LessonPage = observer(() => {
   const { courseId, lessonId } = useParams();
   const navigate = useNavigate();
+  const [isReadyToComplete, setIsReadyToComplete] = useState(false);
+  const [showAssistant, setShowAssistant] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
   useEffect(() => {
     courseStore.loadLesson(courseId, lessonId);
   }, [courseId, lessonId]);
 
   const handleComplete = async () => {
+    if (!isReadyToComplete) return;
     const success = await courseStore.completeLesson(lessonId);
     if (success) {
       navigate(`/courses/${courseId}`);
@@ -47,20 +52,18 @@ const LessonPage = observer(() => {
       <Typography variant="body1" paragraph>
         {lesson.description}
       </Typography>
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          Интерактивная симуляция
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Здесь будет интерактивная симуляция интерфейса
-        </Typography>
-      </Paper>
+      <InteractiveSimulator
+        lesson={lesson}
+        onReadyToComplete={() => setIsReadyToComplete(true)}
+        onStepChange={setCurrentStepIndex}
+      />
       <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
         <Button
           variant="contained"
           size="large"
           onClick={handleComplete}
           sx={{ minHeight: '56px', fontSize: '1.1rem' }}
+          disabled={!isReadyToComplete}
         >
           Завершить урок
         </Button>
@@ -73,7 +76,19 @@ const LessonPage = observer(() => {
           Назад к курсу
         </Button>
       </Box>
-      <ChatBot lessonId={lessonId} />
+      <Box sx={{ mb: 2 }}>
+        <Button
+          variant="outlined"
+          size="large"
+          sx={{ minHeight: '56px', fontSize: '1.1rem' }}
+          onClick={() => setShowAssistant((prev) => !prev)}
+        >
+          {showAssistant ? 'Скрыть помощника' : 'Помощь'}
+        </Button>
+      </Box>
+      {showAssistant && (
+        <ChatBot lessonId={lessonId} currentStepIndex={currentStepIndex} />
+      )}
     </Box>
   );
 });
